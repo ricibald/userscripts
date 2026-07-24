@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         ChatGPT - Suono a risposta completata
 // @namespace    https://github.com/ricibald/userscripts
-// @version      1.0.0
-// @description  Riproduce un breve suono quando ChatGPT termina di generare una risposta.
+// @version      1.1.0
+// @description  Riproduce un suono e segnala la scheda quando ChatGPT termina una risposta.
 // @author       Riccardo
 // @match        https://chatgpt.com/*
 // @match        https://www.chatgpt.com/*
@@ -44,6 +44,16 @@
 
     const COMPLETION_DELAY_MS = 1800;
     const OBSERVER_DEBOUNCE_MS = 120;
+    const ATTENTION_TITLE_PREFIX = '🔔 RISPOSTA PRONTA · ';
+    const ATTENTION_FAVICON_MARKER = 'data-chatgpt-completion-attention';
+    const ATTENTION_FAVICON = `data:image/svg+xml,${encodeURIComponent(`
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+            <rect width="64" height="64" rx="14" fill="#d93025"/>
+            <circle cx="32" cy="46" r="4" fill="white"/>
+            <path d="M32 14v23" stroke="white" stroke-width="8"
+                  stroke-linecap="round"/>
+        </svg>
+    `)}`;
 
     let audioContext = null;
     let audioUnlocked = false;
@@ -54,6 +64,9 @@
     let lastNotifiedSignature = '';
     let scanTimer = null;
     let completionTimer = null;
+    let attentionTimer = null;
+    let attentionActive = false;
+    let baseTitle = '';
 
     function hashText(value) {
         let hash = 2166136261;
@@ -159,6 +172,75 @@
         }
     }
 
+    function stripAttentionPrefix(title) {
+        return title.startsWith(ATTENTION_TITLE_PREFIX)
+            ? title.slice(ATTENTION_TITLE_PREFIX.length)
+            : title;
+    }
+
+    function ensureAttentionFavicon() {
+        let favicon = document.querySelector(`link[${ATTENTION_FAVICON_MARKER}]`);
+        if (!favicon) {
+            favicon = document.createElement('link');
+            favicon.rel = 'icon';
+            favicon.type = 'image/svg+xml';
+            favicon.href = ATTENTION_FAVICON;
+            favicon.setAttribute(ATTENTION_FAVICON_MARKER, '');
+        }
+
+        if (document.head) {
+            document.head.append(favicon);
+        }
+    }
+
+    function maintainTabAttention() {
+        if (!attentionActive) {
+            return;
+        }
+
+        const currentTitle = document.title;
+        if (!currentTitle.startsWith(ATTENTION_TITLE_PREFIX)) {
+            baseTitle = currentTitle || baseTitle;
+        }
+
+        document.title = `${ATTENTION_TITLE_PREFIX}${baseTitle}`;
+        ensureAttentionFavicon();
+    }
+
+    function showTabAttention() {
+        if (!document.hidden && document.hasFocus()) {
+            return;
+        }
+
+        if (!attentionActive) {
+            attentionActive = true;
+            baseTitle = stripAttentionPrefix(document.title);
+            attentionTimer = window.setInterval(maintainTabAttention, 1000);
+        }
+
+        maintainTabAttention();
+    }
+
+    function clearTabAttention() {
+        if (!attentionActive) {
+            return;
+        }
+
+        attentionActive = false;
+        window.clearInterval(attentionTimer);
+        attentionTimer = null;
+
+        const currentTitle = stripAttentionPrefix(document.title);
+        document.title = currentTitle || baseTitle;
+        document.querySelector(`link[${ATTENTION_FAVICON_MARKER}]`)?.remove();
+    }
+
+    function clearAttentionWhenViewed() {
+        if (!document.hidden && document.hasFocus()) {
+            clearTabAttention();
+        }
+    }
+
     function markResponseExpected() {
         responseExpected = true;
         generationObserved = false;
@@ -192,6 +274,7 @@
 
         if (current.signature !== lastNotifiedSignature) {
             lastNotifiedSignature = current.signature;
+            showTabAttention();
             void playCompletionSound();
         }
 
@@ -287,6 +370,8 @@
 
     document.addEventListener('pointerdown', unlockAudio, true);
     document.addEventListener('keydown', unlockAudio, true);
+    document.addEventListener('visibilitychange', clearAttentionWhenViewed);
+    window.addEventListener('focus', clearAttentionWhenViewed);
 
     new MutationObserver(scheduleScan).observe(document.documentElement, {
         childList: true,
@@ -302,6 +387,14 @@
                 void playCompletionSound();
             }
         });
+    });
+
+    GM_registerMenuCommand('Prova l’indicatore di attenzione', () => {
+        attentionActive = true;
+        baseTitle = stripAttentionPrefix(document.title);
+        window.clearInterval(attentionTimer);
+        attentionTimer = window.setInterval(maintainTabAttention, 1000);
+        maintainTabAttention();
     });
 
     const initial = getLastAssistantSnapshot();
