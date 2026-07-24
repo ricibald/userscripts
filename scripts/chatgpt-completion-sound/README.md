@@ -1,8 +1,8 @@
 # ChatGPT – Suono a risposta completata
 
-Riproduce un breve doppio tono quando ChatGPT termina di generare una risposta e segnala visivamente la scheda che richiede attenzione.
+Riproduce un breve doppio tono quando ChatGPT termina di generare una risposta e richiede l'attenzione nativa del browser.
 
-**Versione:** 1.1.0
+**Versione:** 1.1.1
 
 ## Installazione
 
@@ -21,11 +21,12 @@ Lo script si attiva automaticamente. Dopo ogni caricamento della pagina, il prim
 
 Se la risposta termina mentre la scheda o la finestra non è attiva:
 
-- il titolo della scheda mostra **🔔 RISPOSTA PRONTA**;
-- la favicon viene sostituita temporaneamente da un indicatore rosso;
-- gli indicatori scompaiono appena si torna sulla scheda.
+- Chromium/Edge marca la scheda come **richiede attenzione**;
+- la scheda viene evidenziata secondo il comportamento nativo del browser;
+- il titolo e la favicon non vengono modificati;
+- tornando sulla scheda appare il messaggio **ChatGPT ha completato la risposta**, da chiudere con **OK**.
 
-Dal menu di Tampermonkey sono disponibili i comandi **Prova il suono di completamento** e **Prova l’indicatore di attenzione**.
+Il dialogo modale è necessario perché una pagina web non può impostare direttamente lo stato nativo `attention` della scheda. Dal menu di Tampermonkey sono disponibili i comandi **Prova il suono di completamento** e **Prova l’attenzione nativa fra 3 secondi**; per il secondo test, passare a un'altra scheda entro tre secondi.
 
 ## Funzionamento
 
