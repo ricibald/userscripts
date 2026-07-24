@@ -1,8 +1,8 @@
 # ChatGPT – Suono a risposta completata
 
-Riproduce un breve doppio tono quando ChatGPT termina di generare una risposta.
+Riproduce un breve doppio tono quando ChatGPT termina di generare una risposta e segnala visivamente la scheda che richiede attenzione.
 
-**Versione:** 1.0.0
+**Versione:** 1.1.0
 
 ## Installazione
 
@@ -19,7 +19,13 @@ Aprendo il link, Tampermonkey mostra la schermata di installazione. Confermare c
 
 Lo script si attiva automaticamente. Dopo ogni caricamento della pagina, il primo click o tasto premuto abilita l'audio secondo le regole di autoplay del browser. Il normale invio di un prompt è sufficiente.
 
-Dal menu di Tampermonkey è disponibile il comando **Prova il suono di completamento**.
+Se la risposta termina mentre la scheda o la finestra non è attiva:
+
+- il titolo della scheda mostra **🔔 RISPOSTA PRONTA**;
+- la favicon viene sostituita temporaneamente da un indicatore rosso;
+- gli indicatori scompaiono appena si torna sulla scheda.
+
+Dal menu di Tampermonkey sono disponibili i comandi **Prova il suono di completamento** e **Prova l’indicatore di attenzione**.
 
 ## Funzionamento
 
