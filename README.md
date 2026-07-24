@@ -7,7 +7,7 @@ Raccolta pubblica di userscript Tampermonkey mantenuti da [ricibald](https://git
 | Script | Descrizione | Installazione |
 |---|---|---|
 | ChatGPT – Scarica risposta in PDF | Aggiunge a ogni risposta di ChatGPT un pulsante per esportarla in PDF A4. | [Installa](https://raw.githubusercontent.com/ricibald/userscripts/main/scripts/chatgpt-response-pdf/chatgpt-response-pdf.user.js) |
-| ChatGPT – Suono a risposta completata | Riproduce un suono e segnala la scheda quando ChatGPT termina una risposta. | [Installa](https://raw.githubusercontent.com/ricibald/userscripts/main/scripts/chatgpt-completion-sound/chatgpt-completion-sound.user.js) |
+| ChatGPT – Suono a risposta completata | Riproduce un suono e richiama l'attenzione nativa della scheda quando ChatGPT termina. | [Installa](https://raw.githubusercontent.com/ricibald/userscripts/main/scripts/chatgpt-completion-sound/chatgpt-completion-sound.user.js) |
 
 ## Installazione
 
