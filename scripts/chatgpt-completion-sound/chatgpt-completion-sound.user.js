@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         ChatGPT - Suono a risposta completata
 // @namespace    https://github.com/ricibald/userscripts
-// @version      1.1.0
-// @description  Riproduce un suono e segnala la scheda quando ChatGPT termina una risposta.
+// @version      1.1.1
+// @description  Riproduce un suono e richiama l'attenzione nativa quando ChatGPT termina.
 // @author       Riccardo
 // @match        https://chatgpt.com/*
 // @match        https://www.chatgpt.com/*
@@ -44,16 +44,8 @@
 
     const COMPLETION_DELAY_MS = 1800;
     const OBSERVER_DEBOUNCE_MS = 120;
-    const ATTENTION_TITLE_PREFIX = '🔔 RISPOSTA PRONTA · ';
-    const ATTENTION_FAVICON_MARKER = 'data-chatgpt-completion-attention';
-    const ATTENTION_FAVICON = `data:image/svg+xml,${encodeURIComponent(`
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-            <rect width="64" height="64" rx="14" fill="#d93025"/>
-            <circle cx="32" cy="46" r="4" fill="white"/>
-            <path d="M32 14v23" stroke="white" stroke-width="8"
-                  stroke-linecap="round"/>
-        </svg>
-    `)}`;
+    const ATTENTION_MESSAGE = 'ChatGPT ha completato la risposta.';
+    const SOUND_DURATION_MS = 360;
 
     let audioContext = null;
     let audioUnlocked = false;
@@ -64,9 +56,6 @@
     let lastNotifiedSignature = '';
     let scanTimer = null;
     let completionTimer = null;
-    let attentionTimer = null;
-    let attentionActive = false;
-    let baseTitle = '';
 
     function hashText(value) {
         let hash = 2166136261;
@@ -172,72 +161,14 @@
         }
     }
 
-    function stripAttentionPrefix(title) {
-        return title.startsWith(ATTENTION_TITLE_PREFIX)
-            ? title.slice(ATTENTION_TITLE_PREFIX.length)
-            : title;
-    }
+    async function notifyCompletion() {
+        await playCompletionSound();
 
-    function ensureAttentionFavicon() {
-        let favicon = document.querySelector(`link[${ATTENTION_FAVICON_MARKER}]`);
-        if (!favicon) {
-            favicon = document.createElement('link');
-            favicon.rel = 'icon';
-            favicon.type = 'image/svg+xml';
-            favicon.href = ATTENTION_FAVICON;
-            favicon.setAttribute(ATTENTION_FAVICON_MARKER, '');
-        }
+        // Lascia terminare il doppio tono prima di aprire il dialogo modale.
+        await new Promise((resolve) => window.setTimeout(resolve, SOUND_DURATION_MS));
 
-        if (document.head) {
-            document.head.append(favicon);
-        }
-    }
-
-    function maintainTabAttention() {
-        if (!attentionActive) {
-            return;
-        }
-
-        const currentTitle = document.title;
-        if (!currentTitle.startsWith(ATTENTION_TITLE_PREFIX)) {
-            baseTitle = currentTitle || baseTitle;
-        }
-
-        document.title = `${ATTENTION_TITLE_PREFIX}${baseTitle}`;
-        ensureAttentionFavicon();
-    }
-
-    function showTabAttention() {
-        if (!document.hidden && document.hasFocus()) {
-            return;
-        }
-
-        if (!attentionActive) {
-            attentionActive = true;
-            baseTitle = stripAttentionPrefix(document.title);
-            attentionTimer = window.setInterval(maintainTabAttention, 1000);
-        }
-
-        maintainTabAttention();
-    }
-
-    function clearTabAttention() {
-        if (!attentionActive) {
-            return;
-        }
-
-        attentionActive = false;
-        window.clearInterval(attentionTimer);
-        attentionTimer = null;
-
-        const currentTitle = stripAttentionPrefix(document.title);
-        document.title = currentTitle || baseTitle;
-        document.querySelector(`link[${ATTENTION_FAVICON_MARKER}]`)?.remove();
-    }
-
-    function clearAttentionWhenViewed() {
-        if (!document.hidden && document.hasFocus()) {
-            clearTabAttention();
+        if (document.hidden || !document.hasFocus()) {
+            window.alert(ATTENTION_MESSAGE);
         }
     }
 
@@ -274,8 +205,7 @@
 
         if (current.signature !== lastNotifiedSignature) {
             lastNotifiedSignature = current.signature;
-            showTabAttention();
-            void playCompletionSound();
+            void notifyCompletion();
         }
 
         responseExpected = false;
@@ -370,8 +300,6 @@
 
     document.addEventListener('pointerdown', unlockAudio, true);
     document.addEventListener('keydown', unlockAudio, true);
-    document.addEventListener('visibilitychange', clearAttentionWhenViewed);
-    window.addEventListener('focus', clearAttentionWhenViewed);
 
     new MutationObserver(scheduleScan).observe(document.documentElement, {
         childList: true,
@@ -389,12 +317,8 @@
         });
     });
 
-    GM_registerMenuCommand('Prova l’indicatore di attenzione', () => {
-        attentionActive = true;
-        baseTitle = stripAttentionPrefix(document.title);
-        window.clearInterval(attentionTimer);
-        attentionTimer = window.setInterval(maintainTabAttention, 1000);
-        maintainTabAttention();
+    GM_registerMenuCommand('Prova l’attenzione nativa fra 3 secondi', () => {
+        window.setTimeout(() => window.alert(ATTENTION_MESSAGE), 3000);
     });
 
     const initial = getLastAssistantSnapshot();
